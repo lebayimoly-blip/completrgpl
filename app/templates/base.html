@@ -8,24 +8,21 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{% block title %}Recensement{% endblock %}</title>
 
-  <!-- PWA -->
-  <link rel="manifest" href="/static/manifest.json">
+<!-- PWA -->
+  <link rel="manifest" href="/manifest.json">
   <meta name="theme-color" content="#0d6efd">
   <link rel="icon" href="/static/icons/icon-192.png">
 
-  <!-- Service Worker -->
-   <script>
+<!-- Service Worker -->
+<script>
   if ('serviceWorker' in navigator) {
-    const swUrl = `${location.origin}/service-worker.js`;
-
-    navigator.serviceWorker.register(swUrl)
+    navigator.serviceWorker.register("/service-worker.js")
       .then(() => console.log('✅ Service Worker enregistré'))
       .catch(err => console.error('❌ Échec SW', err));
   }
 </script>
 
 </head>
-
 <body>
   <!-- Injection dynamique des symboles SVG -->
   <div id="svg-sprite-container"></div>

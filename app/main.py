@@ -25,6 +25,18 @@ from app.routers import attribution
 app = FastAPI()
 templates = Jinja2Templates(directory="app/templates")
 
+from fastapi.responses import FileResponse
+
+# Manifest à la racine
+@app.get("/manifest.json")
+async def manifest():
+    return FileResponse(os.path.join("rgpl", "static", "manifest.json"))
+
+# Service Worker à la racine
+@app.get("/service-worker.js")
+async def service_worker():
+    return FileResponse(os.path.join("rgpl", "static", "service-worker.js"), media_type="application/javascript")
+
 # 🔐 Gestionnaire d'erreurs HTTP
 @app.exception_handler(StarletteHTTPException)
 async def custom_http_exception_handler(request: Request, exc: StarletteHTTPException):
@@ -95,6 +107,7 @@ from fastapi.responses import FileResponse
 @app.get("/service-worker.js")
 async def service_worker():
     return FileResponse("static/service-worker.js", media_type="application/javascript")
+
 
 # ▶️ Lancement local (optionnel)
 if __name__ == "__main__":
