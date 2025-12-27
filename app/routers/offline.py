@@ -1,11 +1,16 @@
 # app/routers/offline.py
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Request, Depends
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
+from app import models
+from app.routers.auth import get_current_user
 
 templates = Jinja2Templates(directory="app/templates")
 router = APIRouter()
 
+# -------------------------------
+# Routes HTML publiques
+# -------------------------------
 @router.get("/add-membre", response_class=HTMLResponse)
 async def add_membre(request: Request):
     return templates.TemplateResponse("add_membre.html", {"request": request})
@@ -65,3 +70,20 @@ async def zones_attribuees(request: Request):
 @router.get("/zone-travail", response_class=HTMLResponse)
 async def zone_travail(request: Request):
     return templates.TemplateResponse("zone_travail.html", {"request": request})
+
+# -------------------------------
+# APIs protégées
+# -------------------------------
+@router.get("/api/sync-status")
+async def sync_status(current_user: models.Utilisateur = Depends(get_current_user)):
+    # Exemple de données fictives
+    pending = [
+        {"nom": "Famille Nguema", "quartier": "Nzeng-Ayong", "date": "2025-12-27"},
+        {"nom": "Famille Mba", "quartier": "Akebe", "date": "2025-12-26"},
+    ]
+    return {"status": "Connecté ✅", "pending": pending}
+
+@router.post("/api/force-sync")
+async def force_sync(current_user: models.Utilisateur = Depends(get_current_user)):
+    # Ici tu déclenches ta logique réelle de synchronisation
+    return {"message": "Synchronisation forcée lancée 🚀"}

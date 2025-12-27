@@ -9,24 +9,23 @@ from app.utils.files import UPLOAD_DIR, generate_family_filename
 from app.database import get_db
 
 router = APIRouter(prefix="/familles", tags=["familles"])
-templates = Jinja2Templates(directory="app/templates")
-
 
 # --- Liste des familles (HTML) ---
 from sqlalchemy.orm import joinedload
 
 @router.get("/", response_class=HTMLResponse)
-def page_familles(request: Request, db: Session = Depends(database.get_db)):
+def page_familles(
+    request: Request,
+    db: Session = Depends(database.get_db),
+    current_user: models.Utilisateur = Depends(auth.get_current_user)  # 👈 ajout
+):
     familles = db.query(models.Famille).options(joinedload(models.Famille.created_by)).all()
     return templates.TemplateResponse("familles.html", {
         "request": request,
-        "familles": familles
+        "familles": familles,
+        "current_user": current_user  # 👈 injection dans le template
     })
 
-# --- Page de création de famille (utilise famille_edit.html déjà existant) ---
-@router.get("/create", response_class=HTMLResponse)
-def page_create_famille(request: Request):
-    return templates.TemplateResponse("famille_edit.html", {"request": request})
 
 
 # --- Création d'une famille ---
@@ -165,32 +164,11 @@ def update_duree(famille_id: int, duree: schemas.DureeCreate, db: Session = Depe
     db.commit()
     return {"message": "Durée de remplissage enregistrée"}
 
-@router.get("/{famille_id}", response_class=HTMLResponse)
-def voir_famille(famille_id: int, request: Request, db: Session = Depends(get_db)):
-    famille = db.query(models.Famille).filter(models.Famille.id == famille_id).first()
-    if not famille:
-        raise HTTPException(status_code=404, detail="Famille non trouvée")
-    return templates.TemplateResponse("famille_detail.html", {"request": request, "famille": famille})
-
 from fastapi import Request
 from fastapi.responses import HTMLResponse
-from fastapi.templating import Jinja2Templates
 
 templates = Jinja2Templates(directory="app/templates")
 
-@router.get("/{famille_id}/edit", response_class=HTMLResponse)
-def edit_famille(famille_id: int, request: Request, db: Session = Depends(get_db)):
-    famille = db.query(models.Famille).filter(models.Famille.id == famille_id).first()
-    if not famille:
-        raise HTTPException(status_code=404, detail="Famille non trouvée")
-
-    membres = db.query(models.Membre).filter(models.Membre.famille_id == famille_id).all()
-
-    return templates.TemplateResponse("edit_famille.html", {
-        "request": request,
-        "famille": famille,
-        "membres": membres
-    })
 
 @router.post("/{famille_id}/update") 
 async def update_famille(famille_id: int, request: Request, db: Session = Depends(get_db)): 
@@ -206,17 +184,6 @@ async def update_famille(famille_id: int, request: Request, db: Session = Depend
     return RedirectResponse(url="/page-familles", status_code=303)
 
 from fastapi import Form
-
-@router.get("/{famille_id}/members/add", response_class=HTMLResponse)
-def add_membre_form(famille_id: int, request: Request, db: Session = Depends(get_db)):
-    famille = db.query(models.Famille).filter(models.Famille.id == famille_id).first()
-    if not famille:
-        raise HTTPException(status_code=404, detail="Famille non trouvée")
-
-    return templates.TemplateResponse("add_membre.html", {
-        "request": request,
-        "famille": famille
-    })
 
 from fastapi.responses import RedirectResponse
 
@@ -286,3 +253,69 @@ async def update_membre(
     db.commit()
 
     return RedirectResponse(url=f"/familles/{famille_id}/edit", status_code=303)
+
+@router.get("/create", response_class=HTMLResponse)
+def page_create_famille(
+    request: Request,
+    current_user: models.Utilisateur = Depends(auth.get_current_user)  # 👈 ajout
+):
+    return templates.TemplateResponse("famille_edit.html", {
+        "request": request,
+        "current_user": current_user
+    })
+
+
+@router.get("/{famille_id}", response_class=HTMLResponse)
+def voir_famille(
+    famille_id: int,
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user: models.Utilisateur = Depends(auth.get_current_user)  # 👈 ajout
+):
+    famille = db.query(models.Famille).filter(models.Famille.id == famille_id).first()
+    if not famille:
+        raise HTTPException(status_code=404, detail="Famille non trouvée")
+    return templates.TemplateResponse("famille_detail.html", {
+        "request": request,
+        "famille": famille,
+        "current_user": current_user
+    })
+
+
+@router.get("/{famille_id}/edit", response_class=HTMLResponse)
+def edit_famille(
+    famille_id: int,
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user: models.Utilisateur = Depends(auth.get_current_user)  # 👈 ajout
+):
+    famille = db.query(models.Famille).filter(models.Famille.id == famille_id).first()
+    if not famille:
+        raise HTTPException(status_code=404, detail="Famille non trouvée")
+
+    membres = db.query(models.Membre).filter(models.Membre.famille_id == famille_id).all()
+
+    return templates.TemplateResponse("edit_famille.html", {
+        "request": request,
+        "famille": famille,
+        "membres": membres,
+        "current_user": current_user
+    })
+
+
+@router.get("/{famille_id}/members/add", response_class=HTMLResponse)
+def add_membre_form(
+    famille_id: int,
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user: models.Utilisateur = Depends(auth.get_current_user)  # 👈 ajout
+):
+    famille = db.query(models.Famille).filter(models.Famille.id == famille_id).first()
+    if not famille:
+        raise HTTPException(status_code=404, detail="Famille non trouvée")
+
+    return templates.TemplateResponse("add_membre.html", {
+        "request": request,
+        "famille": famille,
+        "current_user": current_user
+    })

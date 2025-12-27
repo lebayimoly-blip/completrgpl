@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Request, Form, Depends, Response, Cookie, HTTPException
+from fastapi import APIRouter, Request, Form, Depends, Response, Cookie, HTTPException, status
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
@@ -7,23 +7,27 @@ from datetime import datetime, timedelta
 from dotenv import load_dotenv
 import os
 from passlib.context import CryptContext
+from functools import wraps
+from typing import Callable
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-
-def get_password_hash(password: str) -> str:
-    return pwd_context.hash(password)
-
-from app import models, schemas, database
-from app import crud
-
+from app import models, schemas, database, crud
 from app.database import get_db
 
-# 🔐 Chargement des variables d'environnement
+# 🔐 Variables d'environnement
 load_dotenv()
 SECRET_KEY = os.getenv("SECRET_KEY")
 ALGORITHM = os.getenv("ALGORITHM")
 
-# 🔐 Création du token JWT
+# 🔐 Hash des mots de passe
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+def get_password_hash(password: str) -> str:
+    return pwd_context.hash(password)
+
+# 📦 Router et templates
+router = APIRouter(tags=["auth"])
+templates = Jinja2Templates(directory="app/templates")
+
+# 🔐 Création du token JWT (inclut le rôle)
 def create_access_token(data: dict, expires_delta: timedelta = timedelta(minutes=30)):
     to_encode = data.copy()
     expire = datetime.utcnow() + expires_delta
@@ -32,7 +36,7 @@ def create_access_token(data: dict, expires_delta: timedelta = timedelta(minutes
     print("✅ Token généré :", encoded_jwt)
     return encoded_jwt
 
-# 🔐 Fonction pour récupérer l'utilisateur connecté à partir du cookie
+# 🔐 Récupération de l'utilisateur courant via cookie
 def get_current_user(
     token: str = Cookie(None, alias="access_token"),
     db: Session = Depends(database.get_db)
@@ -46,6 +50,7 @@ def get_current_user(
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         username: str = payload.get("sub")
+        role_in_token: str = payload.get("role")
         print("📦 Payload décodé :", payload)
         if username is None:
             raise HTTPException(status_code=401, detail="Invalid token")
@@ -58,19 +63,19 @@ def get_current_user(
         print("❌ Utilisateur introuvable :", username)
         raise HTTPException(status_code=401, detail="User not found")
 
-    print("✅ Utilisateur authentifié :", user.username)
+    # ⚠️ Alerte si rôle du token ≠ rôle en base (utile pour debug)
+    if role_in_token and user.role != role_in_token:
+        print(f"⚠️ Rôle en base ({user.role}) différent du token ({role_in_token})")
+
+    print("✅ Utilisateur authentifié :", user.username, "– rôle :", user.role)
     return user
 
-# 📦 Configuration du routeur et des templates
-router = APIRouter(tags=["auth"])
-templates = Jinja2Templates(directory="app/templates")
-
-# 🔐 Page de connexion (GET)
+# 🔐 Page de connexion
 @router.get("/login", response_class=HTMLResponse)
 def login_page(request: Request):
     return templates.TemplateResponse("login.html", {"request": request})
 
-# 🔐 Traitement du formulaire de connexion (POST)
+# 🔐 Action de connexion (pose le cookie JWT avec rôle)
 @router.post("/login", response_class=HTMLResponse)
 def login_action(
     request: Request,
@@ -82,25 +87,25 @@ def login_action(
     if not user:
         return templates.TemplateResponse("login.html", {"request": request, "error": "Identifiants incorrects"})
 
-    access_token = create_access_token(data={"sub": user.username})
+    access_token = create_access_token(data={"sub": user.username, "role": user.role})
     response = RedirectResponse(url="/home", status_code=303)
+
+    # 🔎 Lecture des variables d'environnement pour les cookies
+    COOKIE_SECURE = os.getenv("COOKIE_SECURE", "False").lower() == "true"
+    COOKIE_SAMESITE = os.getenv("COOKIE_SAMESITE", "lax")
+    COOKIE_PATH = os.getenv("COOKIE_PATH", "/")
+
     response.set_cookie(
         key="access_token",
         value=access_token,
         httponly=True,
-        max_age=1800,
-        samesite="lax",
-        secure=False,
-        path="/"
+        samesite=COOKIE_SAMESITE,
+        secure=COOKIE_SECURE,
+        path=COOKIE_PATH
     )
     return response
 
-from fastapi import Depends, HTTPException, status
-from functools import wraps
-from typing import Callable
-from app.routers.auth import get_current_user
-from app import models
-
+# 🔒 Décorateur pour restreindre par rôles
 def require_roles(*allowed_roles: str):
     def decorator(func: Callable):
         @wraps(func)
@@ -117,5 +122,5 @@ def require_roles(*allowed_roles: str):
 # 🔓 Déconnexion (supprime le cookie)
 @router.post("/logout")
 def logout(response: Response):
-    response.delete_cookie(key="access_token")
+    response.delete_cookie(key="access_token", path="/")
     return RedirectResponse(url="/login", status_code=303)

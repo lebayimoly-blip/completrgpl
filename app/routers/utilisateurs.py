@@ -1,7 +1,8 @@
+# app/routers/utilisateurs.py
 from fastapi import APIRouter, Depends, HTTPException, Request, Form
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from app import models, schemas, database
 from app.routers import auth
 from app.routers.auth import get_current_user
@@ -10,11 +11,7 @@ from app.routers.auth import get_current_user
 router = APIRouter(prefix="/utilisateurs", tags=["utilisateurs"])
 templates = Jinja2Templates(directory="app/templates")
 
-
 # --- Page HTML des utilisateurs ---
-from sqlalchemy.orm import joinedload
-
-@router.get("/", response_class=HTMLResponse)
 @router.get("/", response_class=HTMLResponse)
 def page_utilisateurs(
     request: Request,
@@ -29,10 +26,12 @@ def page_utilisateurs(
     if current_user.role == "super_admin":
         utilisateurs = query.join(models.Province).order_by(models.Province.nom).all()
     else:
-        utilisateurs = query.filter(models.Utilisateur.province_id == current_user.province_id)\
-                            .join(models.Province)\
-                            .order_by(models.Province.nom)\
-                            .all()
+        utilisateurs = (
+            query.filter(models.Utilisateur.province_id == current_user.province_id)
+            .join(models.Province)
+            .order_by(models.Province.nom)
+            .all()
+        )
 
     provinces = db.query(models.Province).all()
     return templates.TemplateResponse("utilisateurs.html", {
@@ -78,7 +77,14 @@ def create_utilisateur_html(
 
 # --- Création d'un utilisateur (JSON API) ---
 @router.post("/json", response_model=schemas.UtilisateurResponse)
-def create_utilisateur(utilisateur: schemas.UtilisateurCreate, db: Session = Depends(database.get_db)):
+def create_utilisateur(
+    utilisateur: schemas.UtilisateurCreate,
+    db: Session = Depends(database.get_db),
+    current_user: models.Utilisateur = Depends(get_current_user)
+):
+    if current_user.role not in ["super_admin", "superviseur_provincial"]:
+        raise HTTPException(status_code=403, detail="Accès réservé aux administrateurs")
+
     existing_user = db.query(models.Utilisateur).filter(models.Utilisateur.username == utilisateur.username).first()
     if existing_user:
         raise HTTPException(status_code=400, detail="Nom d'utilisateur déjà pris")
@@ -99,13 +105,22 @@ def create_utilisateur(utilisateur: schemas.UtilisateurCreate, db: Session = Dep
 
 # --- Liste des utilisateurs (JSON API) ---
 @router.get("/json", response_model=list[schemas.UtilisateurResponse])
-def get_utilisateurs(db: Session = Depends(database.get_db)):
+def get_utilisateurs(
+    db: Session = Depends(database.get_db),
+    current_user: models.Utilisateur = Depends(get_current_user)
+):
+    if current_user.role not in ["super_admin", "superviseur_provincial"]:
+        raise HTTPException(status_code=403, detail="Accès réservé aux administrateurs")
     return db.query(models.Utilisateur).all()
 
 
 # --- Récupérer un utilisateur par ID ---
 @router.get("/{user_id}", response_model=schemas.UtilisateurResponse)
-def get_utilisateur(user_id: int, db: Session = Depends(database.get_db)):
+def get_utilisateur(
+    user_id: int,
+    db: Session = Depends(database.get_db),
+    current_user: models.Utilisateur = Depends(get_current_user)
+):
     db_user = db.query(models.Utilisateur).filter(models.Utilisateur.id == user_id).first()
     if not db_user:
         raise HTTPException(status_code=404, detail="Utilisateur non trouvé")
@@ -114,7 +129,15 @@ def get_utilisateur(user_id: int, db: Session = Depends(database.get_db)):
 
 # --- Supprimer un utilisateur via formulaire HTML ---
 @router.post("/{user_id}/delete", response_class=HTMLResponse)
-def delete_utilisateur_html(request: Request, user_id: int, db: Session = Depends(database.get_db)):
+def delete_utilisateur_html(
+    request: Request,
+    user_id: int,
+    db: Session = Depends(database.get_db),
+    current_user: models.Utilisateur = Depends(get_current_user)
+):
+    if current_user.role not in ["super_admin", "superviseur_provincial"]:
+        raise HTTPException(status_code=403, detail="Accès réservé aux administrateurs")
+
     db_user = db.query(models.Utilisateur).filter(models.Utilisateur.id == user_id).first()
     if not db_user:
         raise HTTPException(status_code=404, detail="Utilisateur non trouvé")
@@ -127,7 +150,14 @@ def delete_utilisateur_html(request: Request, user_id: int, db: Session = Depend
 
 # --- Supprimer un utilisateur (JSON API) ---
 @router.delete("/{user_id}")
-def delete_utilisateur(user_id: int, db: Session = Depends(database.get_db)):
+def delete_utilisateur(
+    user_id: int,
+    db: Session = Depends(database.get_db),
+    current_user: models.Utilisateur = Depends(get_current_user)
+):
+    if current_user.role not in ["super_admin", "superviseur_provincial"]:
+        raise HTTPException(status_code=403, detail="Accès réservé aux administrateurs")
+
     db_user = db.query(models.Utilisateur).filter(models.Utilisateur.id == user_id).first()
     if not db_user:
         raise HTTPException(status_code=404, detail="Utilisateur non trouvé")

@@ -8,10 +8,24 @@ from fastapi.templating import Jinja2Templates
 router = APIRouter(prefix="/doublons", tags=["doublons"])
 templates = Jinja2Templates(directory="app/templates")
 
+from fastapi import APIRouter, Request, Depends, HTTPException
+from fastapi.responses import HTMLResponse, RedirectResponse
+from sqlalchemy.orm import Session
+from sqlalchemy import func
+from .. import database, models
+from fastapi.templating import Jinja2Templates
+from app.routers.auth import get_current_user  # 👈 import
+
+router = APIRouter(prefix="/doublons", tags=["doublons"])
+templates = Jinja2Templates(directory="app/templates")
+
 @router.get("/", response_class=HTMLResponse)
 @router.get("", response_class=HTMLResponse)
-def afficher_doublons(request: Request, db: Session = Depends(database.get_db)):
-    # Trouver les groupes de doublons (même nom + même date de naissance, insensibles à la casse)
+def afficher_doublons(
+    request: Request,
+    db: Session = Depends(database.get_db),
+    current_user: models.Utilisateur = Depends(get_current_user)  # 👈 ajout
+):
     doublons_groupes = (
         db.query(
             func.lower(models.Membre.first_name).label("prenom"),
@@ -19,12 +33,15 @@ def afficher_doublons(request: Request, db: Session = Depends(database.get_db)):
             models.Membre.date_of_birth,
             func.count(models.Membre.id).label("nb")
         )
-        .group_by(func.lower(models.Membre.first_name), func.lower(models.Membre.last_name), models.Membre.date_of_birth)
+        .group_by(
+            func.lower(models.Membre.first_name),
+            func.lower(models.Membre.last_name),
+            models.Membre.date_of_birth
+        )
         .having(func.count(models.Membre.id) > 1)
         .all()
     )
 
-    # Pour chaque groupe, récupérer les membres concernés
     doublons = []
     for groupe in doublons_groupes:
         membres = db.query(models.Membre).filter(
@@ -39,7 +56,11 @@ def afficher_doublons(request: Request, db: Session = Depends(database.get_db)):
             "membres": membres
         })
 
-    return templates.TemplateResponse("doublons.html", {"request": request, "doublons": doublons})
+    return templates.TemplateResponse("doublons.html", {
+        "request": request,
+        "doublons": doublons,
+        "current_user": current_user  # 👈 bien placé dans le dict
+    })
 
 @router.post("/supprimer/{membre_id}")
 def supprimer_doublon(membre_id: int, db: Session = Depends(database.get_db)):

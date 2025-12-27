@@ -1,3 +1,4 @@
+# app/routers/stats.py
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
@@ -5,16 +6,19 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func
 from datetime import datetime
 from .. import database, models
+from app.routers.auth import get_current_user  # 👈 import ajouté
 
 router = APIRouter(prefix="/stats", tags=["statistiques"])
 templates = Jinja2Templates(directory="app/templates")
+
 
 @router.get("/page-stats", response_class=HTMLResponse)
 def page_stats(
     request: Request,
     db: Session = Depends(database.get_db),
     annee: int = None,
-    depuis: int = None
+    depuis: int = None,
+    current_user: models.Utilisateur = Depends(get_current_user)  # 👈 ajout
 ):
     base_query = db.query(models.Membre)
 
@@ -80,4 +84,8 @@ def page_stats(
         "filtre_depuis": depuis
     }
 
-    return templates.TemplateResponse("stats.html", {"request": request, "stats": stats})
+    return templates.TemplateResponse("stats.html", {
+        "request": request,
+        "stats": stats,
+        "current_user": current_user  # 👈 injection dans le template
+    })

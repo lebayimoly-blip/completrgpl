@@ -2,6 +2,9 @@ from sqlalchemy import Column, Integer, String, ForeignKey, DateTime, Float
 from sqlalchemy.orm import relationship
 from .database import Base
 import datetime
+from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, DateTime, Float
+from sqlalchemy.orm import relationship
+from app.database import Base
 
 class Famille(Base):
     __tablename__ = "familles"
@@ -31,9 +34,11 @@ class Famille(Base):
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
     created_by_id = Column(Integer, ForeignKey("utilisateurs.id"), nullable=True)
 
+    # 🔎 Nouveau champ pour suivi de synchro
+    is_synced = Column(Boolean, default=False)
+
     created_by = relationship("Utilisateur", back_populates="familles")
     membres = relationship("Membre", back_populates="famille")
-    
 
 
 class Membre(Base):

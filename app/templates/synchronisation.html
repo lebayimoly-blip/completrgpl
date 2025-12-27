@@ -8,7 +8,9 @@
   <p id="status-connexion">État de la connexion : <strong>...</strong></p>
 
   <h3>🕓 Données en attente de synchronisation</h3>
-  <table border="1" cellpadding="8" cellspacing="0">
+  <p><small>ℹ️ L = données locales, S = données serveur</small></p>
+
+  <table class="table table-striped table-bordered">
     <thead>
       <tr>
         <th>#</th>
@@ -23,8 +25,41 @@
   </table>
 
   <button id="forceSyncBtn" class="btn btn-warning">🔁 Forcer la synchronisation</button>
+  <div id="sync-message" class="mt-2 text-info"></div>
 {% endblock %}
 
 {% block scripts %}
-  <script src="/static/js/sync-status.js"></script>
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  fetch("/api/pending-records")
+    .then(res => res.json())
+    .then(data => {
+      const tbody = document.querySelector("#pending-table");
+      tbody.innerHTML = "";
+
+      if (data.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="4">✅ Aucune donnée en attente</td></tr>`;
+        return;
+      }
+
+      data.forEach((famille, index) => {
+        tbody.innerHTML += `
+          <tr>
+            <td>${index + 1}</td>
+            <td>${famille.name || ""}</td>
+            <td>${famille.city || ""}</td>
+            <td>${famille.created_at || ""}</td>
+          </tr>
+        `;
+      });
+    })
+    .catch(err => {
+      console.error("Erreur de chargement", err);
+      const tbody = document.querySelector("#pending-table");
+      tbody.innerHTML = `<tr><td colspan="4">❌ Erreur de chargement des données</td></tr>`;
+    });
+});
+</script>
+
+<script src="/static/js/sync-status.js"></script>
 {% endblock %}

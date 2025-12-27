@@ -80,5 +80,11 @@
   <script src="/static/js/db.js" defer></script>
   <script src="/static/js/main.js" defer></script>
 
+  {% if not current_user and request.url.path not in ["/login", "/offline.html", "/unauthorized.html", "/synchronisation"] %}
+  <script>
+  // Redirection automatique si l'utilisateur n'est pas connecté
+  window.location.href = "/login";
+  </script>
+  {% endif %}
 </body>
 </html>

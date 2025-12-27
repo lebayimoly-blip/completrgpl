@@ -1,11 +1,9 @@
 from sqlalchemy.orm import Session
 from app import models, schemas
-from app.security import get_password_hash
-from app.security import verify_password
+from app.security import get_password_hash, verify_password
 
 # --- Utilisateurs ---
 def create_utilisateur(db: Session, utilisateur: schemas.UtilisateurCreate):
-    # Vérifie si l'utilisateur existe déjà
     existing_user = db.query(models.Utilisateur).filter(
         models.Utilisateur.username == utilisateur.username
     ).first()
@@ -41,6 +39,15 @@ def delete_utilisateur(db: Session, user_id: int):
     return False
 
 
+def authenticate_user(db: Session, username: str, password: str):
+    user = db.query(models.Utilisateur).filter(models.Utilisateur.username == username).first()
+    if not user:
+        return None
+    if not verify_password(password, user.hashed_password):
+        return None
+    return user
+
+
 # --- Familles ---
 def create_famille(db: Session, famille: schemas.FamilleCreate, current_user_id: int):
     db_famille = models.Famille(
@@ -61,6 +68,7 @@ def create_famille(db: Session, famille: schemas.FamilleCreate, current_user_id:
         longitude=famille.longitude,
         photo_path=famille.photo_path,
         created_by_id=current_user_id,
+        is_synced=False,  # 🔎 toujours non synchronisé à la création
     )
     db.add(db_famille)
     db.commit()
@@ -124,12 +132,20 @@ def delete_member(db: Session, membre_id: int):
         return True
     return False
 
-from app.security import verify_password  # Assure-toi que ceci est bien importé
 
-def authenticate_user(db: Session, username: str, password: str):
-    user = db.query(models.Utilisateur).filter(models.Utilisateur.username == username).first()
-    if not user:
-        return None
-    if not verify_password(password, user.hashed_password):
-        return None
-    return user
+# --- Synchronisation ---
+def get_pending_records(db: Session, user_id: int):
+    """Retourne les familles non synchronisées pour un utilisateur donné"""
+    return db.query(models.Famille).filter(
+        models.Famille.is_synced == False,
+        models.Famille.created_by_id == user_id
+    ).all()
+
+
+def force_synchronisation(db: Session, user_id: int):
+    """Marque comme synchronisées toutes les familles en attente de l'utilisateur"""
+    pending = get_pending_records(db, user_id)
+    for record in pending:
+        record.is_synced = True
+    db.commit()
+    return len(pending)
