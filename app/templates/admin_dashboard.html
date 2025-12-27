@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+
+{% block title %}Admin Dashboard{% endblock %}
+
+{% block content %}
+<h2>🔐 Tableau de bord administrateur</h2>
+
+<p>Bienvenue, <strong>{{ user.username }}</strong> ({{ user.role }})</p>
+
+<ul>
+    <li>Total utilisateurs : <strong>{{ total_users }}</strong></li>
+    <li>Total familles : <strong>{{ total_familles }}</strong></li>
+    <li>Total membres : <strong>{{ total_membres }}</strong></li>
+</ul>
+
+<a href="/home" class="btn btn-secondary">⬅️ Retour à l'accueil</a>
+{% endblock %}

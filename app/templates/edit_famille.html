@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+
+{% block title %}Modifier une famille{% endblock %}
+
+{% block content %}
+<h2>✏️ Modifier la famille</h2>
+
+<form method="post" action="/familles/{{ famille.id }}/update" enctype="multipart/form-data">
+    <label>Nom de la famille :</label>
+    <input type="text" name="name" value="{{ famille.name }}" required><br>
+
+    <h3>Personne cible</h3>
+    <label>Prénom :</label><input type="text" name="first_name" value="{{ famille.first_name }}" required>
+    <label>Nom :</label><input type="text" name="last_name" value="{{ famille.last_name }}" required>
+    <label>Date de naissance :</label><input type="date" name="date_of_birth" value="{{ famille.date_of_birth }}" required>
+    <label>Genre :</label>
+    <select name="gender">
+        <option value="male" {% if famille.gender == 'male' %}selected{% endif %}>Homme</option>
+        <option value="female" {% if famille.gender == 'female' %}selected{% endif %}>Femme</option>
+        <option value="other" {% if famille.gender == 'other' %}selected{% endif %}>Autre</option>
+    </select>
+    <label>Nationalité :</label><input type="text" name="nationality" value="{{ famille.nationality }}" required>
+    <label>Type de pièce :</label><input type="text" name="id_type" value="{{ famille.id_type }}" required>
+    <label>Numéro de pièce :</label><input type="text" name="id_number" value="{{ famille.id_number }}" required>
+    <label>Lieu de naissance :</label><input type="text" name="place_of_birth" value="{{ famille.place_of_birth }}" required>
+    <label>Province :</label><input type="text" name="province" value="{{ famille.province }}" required>
+    <label>Ville :</label><input type="text" name="city" value="{{ famille.city }}" required>
+    <label>Quartier :</label><input type="text" name="district" value="{{ famille.district }}" required>
+
+    <label>📷 Nouvelle photo du logement (optionnel) :</label>
+    <input type="file" name="photo" accept="image/*"><br>
+
+    <button type="submit">💾 Enregistrer les modifications</button>
+</form>
+
+<hr>
+
+<h3>👥 Membres de la famille</h3>
+<ul>
+    {% for membre in membres %}
+        <li>
+            <strong>{{ membre.first_name }} {{ membre.last_name }}</strong> – {{ membre.role or "Sans rôle" }}
+            <button type="button" onclick="toggleForm({{ membre.id }})" class="btn btn-sm btn-outline-secondary" style="margin-left: 10px;">
+                ✏️ Modifier
+            </button>
+
+            <form method="post" action="/familles/{{ famille.id }}/members/{{ membre.id }}/update" class="membre-form" id="form-{{ membre.id }}" style="display: none; margin-top: 10px; border: 1px solid #ccc; padding: 10px;">
+                <label>Prénom :</label><input type="text" name="first_name" value="{{ membre.first_name }}" required>
+                <label>Nom :</label><input type="text" name="last_name" value="{{ membre.last_name }}" required>
+                <label>Rôle :</label><input type="text" name="role" value="{{ membre.role }}">
+                <label>Date de naissance :</label><input type="date" name="date_of_birth" value="{{ membre.date_of_birth }}">
+                <label>Genre :</label>
+                <select name="gender">
+                    <option value="male" {% if membre.gender == 'male' %}selected{% endif %}>Homme</option>
+                    <option value="female" {% if membre.gender == 'female' %}selected{% endif %}>Femme</option>
+                    <option value="other" {% if membre.gender == 'other' %}selected{% endif %}>Autre</option>
+                </select>
+                <label>Nationalité :</label><input type="text" name="nationality" value="{{ membre.nationality }}">
+                <label>Type de pièce :</label><input type="text" name="id_type" value="{{ membre.id_type }}">
+                <label>Numéro de pièce :</label><input type="text" name="id_number" value="{{ membre.id_number }}">
+                <label>Lieu de naissance :</label><input type="text" name="place_of_birth" value="{{ membre.place_of_birth }}">
+                <label>Province :</label><input type="text" name="province" value="{{ membre.province }}">
+                <label>Ville :</label><input type="text" name="city" value="{{ membre.city }}">
+                <label>Quartier :</label><input type="text" name="district" value="{{ membre.district }}">
+
+                <button type="submit" class="btn btn-sm btn-success">💾 Enregistrer</button>
+            </form>
+        </li>
+    {% endfor %}
+</ul>
+
+<a href="/familles/{{ famille.id }}/members/add" class="btn btn-sm btn-success" style="margin-top: 20px;">
+    ➕ Ajouter un membre
+</a>
+
+<a href="/page-familles" class="btn btn-outline-secondary" style="margin-left: 10px;">⬅️ Retour à la liste</a>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function toggleForm(id) {
+    const forms = document.querySelectorAll('.membre-form');
+    forms.forEach(f => f.style.display = 'none'); // Masquer tous les formulaires
+    const form = document.getElementById('form-' + id);
+    if (form) {
+        form.style.display = 'block'; // Afficher celui du membre cliqué
+    }
+}
+</script>
+{% endblock %}

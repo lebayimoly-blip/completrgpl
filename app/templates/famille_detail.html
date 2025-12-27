@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+
+{% block title %}Détails de la famille{% endblock %}
+
+{% block content %}
+<h2>Famille : {{ famille.name }}</h2>
+
+<p><strong>Durée de remplissage :</strong> {{ famille.duree_remplissage }} sec</p>
+<p><strong>Latitude :</strong> {{ famille.latitude }}</p>
+<p><strong>Longitude :</strong> {{ famille.longitude }}</p>
+
+{% if famille.photo_path %}
+    <p><strong>Photo du logement :</strong></p>
+    <img src="/uploads/{{ famille.photo_path }}" alt="Photo logement" width="300" style="border-radius: 8px;">
+{% endif %}
+
+{% set cible = famille.membres | selectattr("role", "equalto", "Personne cible") | list | first %}
+{% if cible %}
+<div style="border: 2px solid #ffc107; padding: 15px; margin-bottom: 20px; background-color: #fff8e1;">
+    <h3>🎯 Personne cible</h3>
+    <p><strong>Nom :</strong> {{ cible.first_name }} {{ cible.last_name }}</p>
+    <p><strong>Genre :</strong> {{ cible.gender }}</p>
+    <p><strong>Date de naissance :</strong> {{ cible.date_of_birth }}</p>
+    <p><strong>Nationalité :</strong> {{ cible.nationality }}</p>
+    <p><strong>Type de pièce :</strong> {{ cible.id_type }}</p>
+    <p><strong>Numéro de pièce :</strong> {{ cible.id_number }}</p>
+    <p><strong>Lieu de naissance :</strong> {{ cible.place_of_birth }}</p>
+    <p><strong>Province :</strong> {{ cible.province }}</p>
+    <p><strong>Ville :</strong> {{ cible.city }}</p>
+    <p><strong>Quartier :</strong> {{ cible.district }}</p>
+</div>
+{% endif %}
+<h3>Liste des habitants</h3>
+<table border="1" cellpadding="5">
+    <thead>
+        <tr>
+            <th>Prénom</th>
+            <th>Nom</th>
+            <th>Rôle</th>
+            <th>Genre</th>
+            <th>Date de naissance</th>
+            <th>Nationalité</th>
+            <th>Type de pièce</th>
+            <th>Numéro de pièce</th>
+            <th>Lieu de naissance</th>
+            <th>Province</th>
+            <th>Ville</th>
+            <th>Quartier</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for m in famille.membres %}
+        <tr {% if m.role == "Personne cible" %} style="background-color: #ffeeba;" {% endif %}>
+            <td>{{ m.first_name }}</td>
+            <td>{{ m.last_name }}</td>
+            <td>
+                {{ m.role }}
+                {% if m.role == "Personne cible" %}
+                    ⭐
+                {% endif %}
+            </td>
+            <td>{{ m.gender }}</td>
+            <td>{{ m.date_of_birth }}</td>
+            <td>{{ m.nationality }}</td>
+            <td>{{ m.id_type }}</td>
+            <td>{{ m.id_number }}</td>
+            <td>{{ m.place_of_birth }}</td>
+            <td>{{ m.province }}</td>
+            <td>{{ m.city }}</td>
+            <td>{{ m.district }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<br>
+<button onclick="exportFamilyCSV()">📥 Télécharger en CSV</button>
+<a href="/page-familles" class="btn btn-secondary">⬅️ Retour</a>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function exportFamilyCSV() {
+    let rows = [["Prénom", "Nom", "Rôle", "Genre", "Date de naissance", "Nationalité", "Type de pièce", "Numéro de pièce", "Lieu de naissance", "Province", "Ville", "Quartier"]];
+    document.querySelectorAll("table tbody tr").forEach(tr => {
+        let cols = Array.from(tr.querySelectorAll("td")).map(td => td.innerText);
+        rows.push(cols);
+    });
+    let csv = "data:text/csv;charset=utf-8," + rows.map(e => e.join(",")).join("\n");
+    let link = document.createElement("a");
+    link.setAttribute("href", encodeURI(csv));
+    link.setAttribute("download", "famille_{{ famille.id }}.csv");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
+</script>
+{% endblock %}

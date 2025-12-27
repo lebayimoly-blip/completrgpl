@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+
+{% block title %}Utilisateurs{% endblock %}
+
+{% block content %}
+{% if current_user.role in ["super_admin", "superviseur_provincial"] %}
+<h1>Liste des utilisateurs</h1>
+
+<!-- Debug : nombre de provinces -->
+<p>Provinces disponibles : {{ provinces | length }}</p>
+
+<!-- Formulaire pour créer un nouvel utilisateur -->
+<form method="post" action="/utilisateurs" onsubmit="return setProvinceId()">
+  <label>Nom d'utilisateur :</label>
+  <input type="text" name="username" required>
+
+  <label>Mot de passe :</label>
+  <input type="password" name="password" required>
+
+  <label>Rôle :</label>
+  <select name="role" required>
+    <option value="agent_recenseur">Agent recenseur</option>
+    <option value="chef_equipe">Chef d’équipe</option>
+    <option value="controleur">Contrôleur</option>
+    <option value="superviseur_provincial">Superviseur provincial</option>
+    <option value="super_admin">Super admin</option>
+  </select>
+
+  <label>Province (nom exact) :</label>
+  <input type="text" id="province_nom" required placeholder="Ex: Estuaire">
+
+  <!-- Champ caché qui sera rempli automatiquement -->
+  <input type="hidden" name="province_id" id="province_id">
+
+  <!-- Liste des provinces disponibles -->
+  <small>
+    <strong>Provinces disponibles :</strong><br>
+    1 – Estuaire<br>
+    2 – Haut-Ogooué<br>
+    3 – Moyen-Ogooué<br>
+    4 – Ngounié<br>
+    5 – Nyanga<br>
+    6 – Ogooué-Ivindo<br>
+    7 – Ogooué-Lolo<br>
+    8 – Ogooué-Maritime<br>
+    9 – Woleu-Ntem
+  </small>
+
+  <br><br>
+  <button type="submit" class="btn">Créer l'utilisateur</button>
+</form>
+
+<!-- Liste des utilisateurs avec bouton suppression -->
+{% set current_province = None %}
+<ul>
+  {% for u in utilisateurs %}
+    {% if current_province != u.province.nom %}
+      {% if not loop.first %}
+        </ul>
+      {% endif %}
+      <hr>
+      <h3>🌍 Province : {{ u.province.nom }}</h3>
+      <ul>
+      {% set current_province = u.province.nom %}
+    {% endif %}
+    <li>
+      {{ u.username }} – rôle : {{ u.role }} – 
+      {{ u.familles|length }} famille{% if u.familles|length > 1 %}s{% endif %} créée{% if u.familles|length > 1 %}s{% endif %}
+      <form action="/utilisateurs/{{ u.id }}/delete" method="post" style="display:inline;">
+        <button type="submit" style="background-color:red; color:white;">🗑️ Supprimer</button>
+      </form>
+    </li>
+  {% endfor %}
+</ul>
+
+
+{% else %}
+<p>⛔ Accès refusé. Cette page est réservée aux administrateurs.</p>
+{% endif %}
+
+<!-- Retour à l'accueil -->
+<a href="/">Retour</a>
+
+<!-- Script pour convertir nom → ID -->
+<script>
+  function setProvinceId() {
+    const nom = document.getElementById("province_nom").value.trim().toLowerCase();
+    const mapping = {
+      "estuaire": 1,
+      "haut-ogooué": 2,
+      "moyen-ogooué": 3,
+      "ngounié": 4,
+      "nyanga": 5,
+      "ogooué-ivindo": 6,
+      "ogooué-lolo": 7,
+      "ogooué-maritime": 8,
+      "woleu-ntem": 9
+    };
+    const id = mapping[nom];
+    if (!id) {
+      alert("Nom de province invalide. Veuillez utiliser un nom exact.");
+      return false;
+    }
+    document.getElementById("province_id").value = id;
+    return true;
+  }
+</script>
+{% endblock %}

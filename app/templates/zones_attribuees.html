@@ -1,0 +1,182 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h2>📍 Zones attribuées</h2>
+
+<form method="get" action="/zones-attribuees" style="margin-bottom: 20px;">
+  <label for="utilisateur_id">👤 Filtrer par utilisateur :</label>
+  <select name="utilisateur_id" onchange="this.form.submit()" style="padding: 5px;">
+    <option value="">-- Tous les utilisateurs --</option>
+    {% for u in utilisateurs %}
+      <option value="{{ u.id }}" {% if utilisateur_id == u.id %}selected{% endif %}>
+        {{ u.username }} ({{ u.role or "rôle non défini" }})
+      </option>
+    {% endfor %}
+  </select>
+</form>
+
+<!-- Tableau des zones -->
+<table border="1" cellpadding="8" cellspacing="0" style="width: 100%; margin-top: 20px;">
+  <thead>
+    <tr>
+      <th>ID Zone</th>
+      <th>Utilisateur</th>
+      <th>Rôle</th>
+      <th>Géométrie (GeoJSON)</th>
+      <th>Action</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for zone in zones %}
+    <tr>
+      <td>{{ zone.id }}</td>
+      <td>{{ zone.utilisateur.username }}</td>
+      <td>{{ zone.utilisateur.role }}</td>
+      <td><pre style="white-space: pre-wrap;">{{ zone.geometrie | tojson(indent=2) }}</pre></td>
+      <td>
+        <button onclick="chargerZoneSurCarte({{ zone.id }}, {{ zone.geometrie | tojson }})">✏️ Modifier</button>
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+<!-- Bouton de sauvegarde -->
+<button onclick="enregistrerModification()" style="margin-top: 15px;">💾 Enregistrer la modification</button>
+
+<!-- Import CSV -->
+<h3 style="margin-top: 40px;">📂 Importer des zones depuis un fichier CSV</h3>
+<form id="formImport" enctype="multipart/form-data">
+  <input type="file" name="file" accept=".csv" required />
+  <button type="submit">📤 Importer</button>
+</form>
+
+<!-- Export CSV -->
+<h3 style="margin-top: 40px;">📄 Exporter les zones existantes</h3>
+<button onclick="exporterZones()">📥 Télécharger CSV</button>
+
+<!-- Carte Leaflet -->
+<div id="map" style="height: 400px; margin-top: 30px;"></div>
+
+<!-- Leaflet JS & CSS -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+<link rel="stylesheet" href="https://unpkg.com/leaflet-draw/dist/leaflet.draw.css" />
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet-draw/dist/leaflet.draw.js"></script>
+
+<script>
+  let map;
+  let drawnItems;
+  let zoneEnCours = null;
+
+  function initMap() {
+    map = L.map('map').setView([0.39, 9.45], 13);
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap contributors'
+    }).addTo(map);
+
+    drawnItems = new L.FeatureGroup();
+    map.addLayer(drawnItems);
+
+    const drawControl = new L.Control.Draw({
+      draw: {
+        polygon: true,
+        polyline: false,
+        rectangle: false,
+        circle: false,
+        marker: false,
+        circlemarker: false
+      },
+      edit: {
+        featureGroup: drawnItems
+      }
+    });
+    map.addControl(drawControl);
+
+    map.on(L.Draw.Event.CREATED, function (e) {
+      drawnItems.clearLayers();
+      drawnItems.addLayer(e.layer);
+    });
+  }
+
+  function chargerZoneSurCarte(id, geojson) {
+    if (map && geojson) {
+      drawnItems.clearLayers();
+      const layer = L.geoJSON(geojson).getLayers()[0];
+      drawnItems.addLayer(layer);
+      map.fitBounds(layer.getBounds());
+      zoneEnCours = id;
+      alert("Zone chargée pour modification.");
+    }
+  }
+
+  function enregistrerModification() {
+    if (!zoneEnCours) {
+      alert("Aucune zone sélectionnée.");
+      return;
+    }
+
+    const layer = drawnItems.getLayers()[0];
+    if (!layer) {
+      alert("Veuillez redessiner la zone.");
+      return;
+    }
+
+    const geojson = layer.toGeoJSON();
+
+    fetch(`/api/zones/${zoneEnCours}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ geojson: geojson })
+    })
+    .then(res => res.json())
+    .then(data => {
+      alert(data.message);
+      location.reload();
+    });
+  }
+
+  document.getElementById("formImport").addEventListener("submit", function(e) {
+    e.preventDefault();
+    const formData = new FormData(this);
+
+    fetch("/api/importer-zones", {
+      method: "POST",
+      body: formData
+    })
+    .then(res => res.json())
+    .then(data => {
+      alert(data.message);
+      location.reload();
+    })
+    .catch(err => {
+      console.error("Erreur import CSV :", err);
+      alert("Erreur lors de l'import.");
+    });
+  });
+
+  function exporterZones() {
+    const rows = [["utilisateur_id", "geojson"]];
+    {% for zone in zones %}
+      rows.push([
+        "{{ zone.utilisateur.id }}",
+        `{{ zone.geometrie | tojson | replace('"', '""') }}`
+      ]);
+    {% endfor %}
+
+    const csvContent = rows.map(e => e.join(",")).join("\n");
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", "zones_export.csv");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }
+
+  window.onload = initMap;
+</script>
+{% endblock %}

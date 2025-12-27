@@ -1,0 +1,61 @@
+🚀 Étapes prioritaires pour avancer rapidement
+✅ 1. Étendre le modèle User avec role et province_id
+Ajoute les colonnes role (String) et province_id (ForeignKey) dans ton modèle User
+
+Crée une table Province avec les 9 provinces du Gabon
+
+Pré-remplis cette table (migration ou script d’initialisation)
+
+🎯 But : permettre l’attribution des utilisateurs à une province et un rôle
+
+✅ 2. Mettre à jour la logique de création d’utilisateur
+Dans le formulaire de création :
+
+Si super admin → peut choisir la province et le rôle
+
+Si superviseur provincial → province fixée automatiquement, rôles limités à contrôleur, chef_equipe, agent_recenseur
+
+Côté backend, vérifie que le superviseur ne crée que dans sa province
+
+🎯 But : sécuriser la création d’utilisateurs selon les droits
+
+✅ 3. Filtrer les vues selon le rôle connecté
+Dans les routes FastAPI et les templates :
+
+super_admin → voit tout
+
+superviseur_provincial → voit uniquement les utilisateurs, zones, familles de sa province
+
+Applique ce filtre dans :
+
+utilisateurs.html
+
+zones.html
+
+familles.html (si applicable)
+
+🎯 But : cloisonner les données par province
+
+✅ 4. Ajouter l’import CSV générique
+Crée un composant réutilisable pour importer des fichiers .csv
+
+Pour chaque module (utilisateurs, zones, etc.) :
+
+Ajoute un bouton "Importer CSV"
+
+Analyse le fichier, valide les colonnes
+
+Associe automatiquement la province du superviseur connecté
+
+Journalise les erreurs ligne par ligne
+
+🎯 But : accélérer la saisie de masse sans erreurs
+
+✅ 5. Gérer l’attribution des zones
+Dans utilisateurs.html, ajoute un bouton "Attribuer une zone"
+
+Filtre les zones disponibles par province
+
+Vérifie que l’utilisateur et la zone sont dans la même province
+
+🎯 But : permettre au superviseur de gérer les affectations

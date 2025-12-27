@@ -1,0 +1,145 @@
+{% extends "base.html" %}
+
+{% block title %}Statistiques{% endblock %}
+
+{% block content %}
+<h1>Statistiques globales</h1>
+
+<p><strong>Total familles :</strong> {{ stats.total_familles }}</p>
+<p><strong>Total membres :</strong> {{ stats.total_membres }}</p>
+
+<hr>
+
+<form method="get" action="/stats/page-stats" style="margin-bottom: 20px;">
+    <label>📅 Filtrer par année :</label>
+    <input type="number" name="annee" placeholder="ex: 2023">
+    <label>ou depuis (années) :</label>
+    <input type="number" name="depuis" placeholder="ex: 5">
+    <button type="submit">Appliquer</button>
+</form>
+
+{% if stats.filtre_annee %}
+<p><strong>Filtre actif :</strong> année = {{ stats.filtre_annee }}</p>
+{% elif stats.filtre_depuis %}
+<p><strong>Filtre actif :</strong> depuis {{ stats.filtre_depuis }} an(s)</p>
+{% endif %}
+
+<hr>
+
+<h2>Répartition par genre</h2>
+{% if stats.genres %}
+<canvas id="genreChart" width="400" height="200"></canvas>
+{% else %}
+<p>Aucune donnée de genre disponible</p>
+{% endif %}
+
+<h2>Répartition par province</h2>
+{% if stats.provinces %}
+<canvas id="provinceChart" width="400" height="200"></canvas>
+{% else %}
+<p>Aucune donnée de province disponible</p>
+{% endif %}
+
+<h2>Répartition des rôles</h2>
+{% if stats.roles %}
+<canvas id="roleChart" width="400" height="200"></canvas>
+{% else %}
+<p>Aucune donnée de rôle disponible</p>
+{% endif %}
+
+<h2>Répartition par ville</h2>
+{% if stats.villes %}
+<canvas id="villeChart" width="400" height="200"></canvas>
+{% else %}
+<p>Aucune donnée de ville disponible</p>
+{% endif %}
+
+<h2>Taux de natalité par année</h2>
+{% if stats.naissances %}
+<canvas id="birthChart" width="400" height="200"></canvas>
+{% else %}
+<p>Aucune donnée de naissance disponible</p>
+{% endif %}
+
+<hr>
+<button onclick="exportStatsCSV()">📥 Exporter les statistiques</button>
+<a href="/" class="btn btn-primary">⬅️ Retour</a>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+const genres = {{ stats.genres | default({}) | tojson }};
+const provinces = {{ stats.provinces | default({}) | tojson }};
+const roles = {{ stats.roles | default({}) | tojson }};
+const villes = {{ stats.villes | default({}) | tojson }};
+const naissances = {{ stats.naissances | default({}) | tojson }};
+
+function createPieChart(id, data, title, colors) {
+    new Chart(document.getElementById(id).getContext('2d'), {
+        type: 'pie',
+        data: {
+            labels: Object.keys(data),
+            datasets: [{
+                data: Object.values(data),
+                backgroundColor: colors
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: { position: 'bottom' },
+                title: { display: true, text: title }
+            }
+        }
+    });
+}
+
+function createBarChart(id, data, title, label, color) {
+    new Chart(document.getElementById(id).getContext('2d'), {
+        type: 'bar',
+        data: {
+            labels: Object.keys(data),
+            datasets: [{
+                label: label,
+                data: Object.values(data),
+                backgroundColor: color
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: { display: false },
+                title: { display: true, text: title }
+            },
+            scales: { y: { beginAtZero: true } }
+        }
+    });
+}
+
+if (Object.keys(genres).length > 0) createPieChart('genreChart', genres, 'Répartition globale par genre', ['#006B3F', '#FFD700', '#1C3D7A']);
+if (Object.keys(provinces).length > 0) createBarChart('provinceChart', provinces, 'Répartition par province', 'Nombre de familles', '#1C3D7A');
+if (Object.keys(roles).length > 0) createPieChart('roleChart', roles, 'Répartition des rôles', ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0']);
+if (Object.keys(villes).length > 0) createBarChart('villeChart', villes, 'Répartition par ville', 'Nombre de membres', '#36A2EB');
+if (Object.keys(naissances).length > 0) createPieChart('birthChart', naissances, 'Naissances par année', ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40']);
+
+function exportStatsCSV() {
+    const datasets = { genres, provinces, roles, villes, naissances };
+    let csv = "Catégorie,Clé,Nombre\n";
+
+    for (const [category, data] of Object.entries(datasets)) {
+        for (const [key, value] of Object.entries(data)) {
+            csv += `${category},${key},${value}\n`;
+        }
+    }
+
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = "statistiques.csv";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
+</script>
+{% endblock %}

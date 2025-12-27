@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+
+{% block title %}Doublons{% endblock %}
+
+{% block content %}
+<h1>Doublons détectés</h1>
+
+{% if doublons %}
+{% for groupe in doublons %}
+    <div style="border:1px solid #ccc; padding:1rem; margin-bottom:1rem;">
+        <h3>{{ groupe.prenom|capitalize }} {{ groupe.nom|upper }} — {{ groupe.date_naissance }}</h3>
+
+        <!-- 🔽 ICI : bouton pour supprimer tous sauf un -->
+        <form method="post" action="/doublons/supprimer-groupe/" style="margin-bottom: 1rem;">
+            <input type="hidden" name="prenom" value="{{ groupe.prenom }}">
+            <input type="hidden" name="nom" value="{{ groupe.nom }}">
+            <input type="hidden" name="date_naissance" value="{{ groupe.date_naissance }}">
+            <button type="submit" onclick="return confirm('Supprimer tous les doublons sauf un ?')">
+                🧹 Supprimer tous sauf un
+            </button>
+        </form>
+
+        <!-- 🔽 Liste des membres du groupe -->
+        <ul>
+            {% for membre in groupe.membres %}
+                <li>
+                    ID #{{ membre.id }} — {{ membre.first_name }} {{ membre.last_name }} —
+                    {{ membre.date_of_birth }}
+                    <form method="post" action="/doublons/supprimer/{{ membre.id }}" style="display:inline;">
+                        <button type="submit" onclick="return confirm('Supprimer ce doublon ?')">🗑️ Supprimer</button>
+                    </form>
+                </li>
+            {% endfor %}
+        </ul>
+    </div>
+{% endfor %}
+
+{% else %}
+    <p>Aucun doublon détecté.</p>
+{% endif %}
+
+<a href="/home" class="btn btn-primary">⬅️ Retour à l'accueil</a>
+{% endblock %}

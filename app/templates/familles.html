@@ -1,0 +1,119 @@
+{% extends "base.html" %}
+
+{% block title %}Liste des familles{% endblock %}
+
+{% block content %}
+<h2>Liste des familles</h2>
+
+<!-- Barre de recherche -->
+<input type="text" id="searchInput" placeholder="🔍 Rechercher une famille..." onkeyup="filterFamilies()">
+<!-- Filtre par province du créateur -->
+<select id="provinceFilter" onchange="filterFamilies()" style="margin-left: 10px;">
+    <option value="">🏞️ Filtrer par province...</option>
+    <option value="estuaire">Estuaire</option>
+    <option value="haut-ogooué">Haut-Ogooué</option>
+    <option value="moyen-ogooué">Moyen-Ogooué</option>
+    <option value="ngounié">Ngounié</option>
+    <option value="nyanga">Nyanga</option>
+    <option value="ogooué-ivindo">Ogooué-Ivindo</option>
+    <option value="ogooué-lolo">Ogooué-Lolo</option>
+    <option value="ogooué-maritime">Ogooué-Maritime</option>
+    <option value="woleu-ntem">Woleu-Ntem</option>
+</select>
+
+
+<!-- Bouton export CSV -->
+<button onclick="exportCSV()">📥 Exporter en CSV</button>
+
+<!-- Liste des familles -->
+<ul id="familyList">
+    {% for f in familles %}
+        <li>
+            <button onclick="toggleDetails({{ f.id }})">
+                <strong>{{ f.root_person_name }}</strong> 
+                ((Famille : {{ f.name }} — {{ f.membres|length }} membre{% if f.membres|length > 1 %}s{% endif %})
+            </button>
+            <a href="/familles/{{ f.id }}" class="btn btn-sm btn-primary" style="margin-left: 10px;">
+                👁️ Voir la famille
+            </a>
+            <a href="/familles/{{ f.id }}/edit" class="btn btn-sm btn-warning" style="margin-left: 10px;">
+               ✏️ Modifier la famille
+            </a>
+     
+            <div id="details-{{ f.id }}" class="details" style="display:none; margin-left:20px;">
+                <p><strong>Localisation :</strong> {{ f.localisation }}</p>
+                <p><strong>Latitude :</strong> {{ f.latitude }}</p>
+                <p><strong>Longitude :</strong> {{ f.longitude }}</p>
+                <p><strong>Durée de remplissage :</strong> {{ f.duree_remplissage }} sec</p>
+
+                <p><strong>Créée par :</strong> 
+                   {% if f.created_by %}
+                       {{ f.created_by.username }} ({{ f.created_by.province.nom if f.created_by.province else 'Province inconnue' }})
+                   {% else %}
+                       Utilisateur inconnu
+                   {% endif %}
+                </p>
+                <p><strong>Date de création :</strong> 
+                   {% if f.created_at %}
+                       {{ f.created_at.strftime('%d/%m/%Y à %H:%M') }}
+                   {% else %}
+                       Non disponible
+                   {% endif %}
+                </p>
+
+                {% if f.photo_path %}
+                    <p><strong>Photo logement :</strong></p>
+                    <img src="/uploads/{{ f.photo_path }}" alt="Photo logement" width="200" style="border-radius: 8px; object-fit: cover;">
+                {% endif %}
+
+                <h4>Membres</h4>
+                <ul>
+                    {% for m in f.membres %}
+                        <li>{{ m.first_name }} {{ m.last_name }} ({{ m.role }})</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </li>
+    {% endfor %}
+</ul>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// --- Filtrage par recherche ---
+function filterFamilies() {
+    let nameInput = document.getElementById("searchInput").value.toLowerCase();
+    let provinceInput = document.getElementById("provinceFilter").value.toLowerCase();
+    let items = document.querySelectorAll("#familyList li");
+
+    items.forEach(li => {
+        let text = li.innerText.toLowerCase();
+        let matchesName = nameInput === "" || text.includes(nameInput);
+        let matchesProvince = provinceInput === "" || text.includes(provinceInput);
+        li.style.display = (matchesName && matchesProvince) ? "" : "none";
+    });
+}
+
+// --- Export CSV ---
+function exportCSV() {
+    let rows = [["Nom personne source", "Nom famille", "Nombre membres", "Latitude", "Longitude", "Durée (sec)"]];
+    document.querySelectorAll("#familyList li").forEach(li => {
+        let text = li.innerText.split("\n")[0];
+        rows.push([text]);
+    });
+    let csvContent = "data:text/csv;charset=utf-8," + rows.map(e => e.join(",")).join("\n");
+    let link = document.createElement("a");
+    link.setAttribute("href", encodeURI(csvContent));
+    link.setAttribute("download", "familles.csv");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
+
+// --- Toggle détails ---
+function toggleDetails(id) {
+    let div = document.getElementById("details-" + id);
+    div.style.display = div.style.display === "none" ? "block" : "none";
+}
+</script>
+{% endblock %}
