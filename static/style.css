@@ -174,3 +174,63 @@ ul li:hover {
   padding: 1rem;
   border-radius: 4px;
 }
+
+/* 📱 Responsivité mobile */
+@media (max-width: 768px) {
+  header {
+    font-size: 1rem;
+    padding: 0.8rem;
+  }
+
+  .menu {
+    flex-direction: column;   /* Menu vertical */
+    align-items: stretch;
+    gap: 0.5rem;
+  }
+
+  .menu a {
+    justify-content: center;
+    padding: 0.8em;
+    font-size: 0.95em;
+  }
+
+  main {
+    padding: 1rem;   /* Réduit les marges */
+  }
+
+  button, .btn {
+    width: 100%;     /* Boutons prennent toute la largeur */
+    font-size: 1em;
+  }
+
+  ul li {
+    padding: 0.8rem;
+    font-size: 0.95em;
+  }
+
+  footer {
+    font-size: 0.8rem;
+    padding: 0.8rem;
+  }
+}
+
+/* 📱 Très petits écrans (smartphones < 480px) */
+@media (max-width: 480px) {
+  header {
+    font-size: 0.9rem;
+    letter-spacing: 0.5px;
+  }
+
+  .menu a {
+    font-size: 0.85em;
+    padding: 0.6em;
+  }
+
+  main {
+    padding: 0.8rem;
+  }
+
+  ul li {
+    font-size: 0.85em;
+  }
+}
