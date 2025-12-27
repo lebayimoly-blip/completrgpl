@@ -1,4 +1,4 @@
-const CACHE_NAME = 'rgpl-cache-v1';
+const CACHE_NAME = 'rgpl-cache-v2'; // ⚡ incrémente la version pour forcer le refresh
 
 const OFFLINE_URLS = [
   '/', '/home', '/login', '/page-famille-edit', '/page-familles',
@@ -31,26 +31,28 @@ self.addEventListener('install', event => {
       }
     })
   );
+  self.skipWaiting(); // ⚡ active immédiatement le nouveau SW
 });
 
-// FETCH : stratégie cache-first simple + exclusion des API
-self.addEventListener('fetch', event => {
-  const url = new URL(event.request.url);
-
-  // ⛔ Ignore les requêtes API
-  if (url.pathname.startsWith('/api/')) return;
-
-  event.respondWith(
-    caches.match(event.request).then(response => {
-      if (response) {
-        return response;
-      }
-
-      return fetch(event.request).catch(() =>
-        caches.match('/offline.html')
-      );
-    })
+// ACTIVATION : suppression des anciens caches et prise de contrôle
+self.addEventListener('activate', event => {
+  event.waitUntil(
+    caches.keys().then(keys =>
+      Promise.all(
+        keys.map(key => {
+          if (key !== CACHE_NAME) {
+            return caches.delete(key); // 🧹 supprime les anciens caches
+          }
+        })
+      )
+    )
   );
+  clients.claim(); // ⚡ prend le contrôle des pages ouvertes
+});
+
+// FETCH : laisser la stratégie normale (réseau par défaut)
+self.addEventListener('fetch', event => {
+  // Ne rien intercepter → le navigateur gère normalement
 });
 
 // SYNC : synchronisation des données en attente
