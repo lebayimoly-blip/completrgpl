@@ -72,7 +72,7 @@ def create_utilisateur_html(
     db.commit()
     db.refresh(db_user)
 
-    return RedirectResponse("/utilisateurs", status_code=303)
+    return RedirectResponse(url="/utilisateurs/?msg=Utilisateur+créé+✅", status_code=303)
 
 
 # --- Création d'un utilisateur (JSON API) ---
@@ -145,7 +145,7 @@ def delete_utilisateur_html(
     db.delete(db_user)
     db.commit()
 
-    return RedirectResponse("/utilisateurs", status_code=303)
+    return RedirectResponse(url="/utilisateurs/?msg=Utilisateur+supprimé+✅", status_code=303)
 
 
 # --- Supprimer un utilisateur (JSON API) ---
