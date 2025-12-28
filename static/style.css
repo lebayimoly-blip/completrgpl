@@ -259,3 +259,63 @@ ul li:hover {
   font-style: italic;
   margin-bottom: 1rem;
 }
+
+/* 📝 Formulaire de login */
+.login-container {
+  max-width: 400px;
+  margin: 2rem auto;
+  padding: 2rem;
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.login-container h2 {
+  text-align: center;
+  color: var(--gabon-blue);
+  margin-bottom: 1.5rem;
+}
+
+.login-container label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: 600;
+  color: var(--text-dark);
+}
+
+.login-container input[type="text"],
+.login-container input[type="password"] {
+  width: 100%;
+  padding: 10px;
+  margin-bottom: 1rem;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 1em;
+}
+
+.login-container button {
+  width: 100%;
+  padding: 12px;
+  font-size: 1em;
+}
+
+@media (max-width: 480px) {
+  .login-container {
+    margin: 1rem;
+    padding: 1rem;
+  }
+
+  .login-container h2 {
+    font-size: 1.1rem;
+  }
+
+  .login-container input {
+    font-size: 0.95em;
+    padding: 8px;
+  }
+
+  .login-container button {
+    font-size: 0.95em;
+    padding: 10px;
+  }
+}

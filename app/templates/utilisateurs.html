@@ -10,7 +10,7 @@
 <p>Provinces disponibles : {{ provinces | length }}</p>
 
 <!-- Formulaire pour créer un nouvel utilisateur -->
-<form method="post" action="/utilisateurs" onsubmit="return setProvinceId()">
+<form method="post" action="/utilisateurs/" onsubmit="return setProvinceId()">
   <label>Nom d'utilisateur :</label>
   <input type="text" name="username" required>
 
