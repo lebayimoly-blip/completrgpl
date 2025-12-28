@@ -27,15 +27,18 @@ templates = Jinja2Templates(directory="app/templates")
 
 from fastapi.responses import FileResponse
 
-# Manifest à la racine
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))   # app/
+ROOT_DIR = os.path.dirname(BASE_DIR)                   # rgpl/
+STATIC_DIR = os.path.join(ROOT_DIR, "static")
+
 @app.get("/manifest.json")
 async def manifest():
-    return FileResponse(os.path.join("rgpl", "static", "manifest.json"))
+    return FileResponse(os.path.join(STATIC_DIR, "manifest.json"), media_type="application/json")
 
-# Service Worker à la racine
 @app.get("/service-worker.js")
 async def service_worker():
-    return FileResponse(os.path.join("rgpl", "static", "service-worker.js"), media_type="application/javascript")
+    return FileResponse(os.path.join(STATIC_DIR, "service-worker.js"), media_type="application/javascript")
+
 
 # 🔐 Gestionnaire d'erreurs HTTP
 @app.exception_handler(StarletteHTTPException)
@@ -62,8 +65,9 @@ app.include_router(pages.router)
 app.include_router(auth.router)
 app.include_router(admin.router)
 app.include_router(doublons.router)
-app.include_router(zones.router)
 app.include_router(attribution.router)
+app.include_router(zones.router_html)
+app.include_router(zones.router_api)
 
 # 🗃️ Création des tables de la base de données
 Base.metadata.create_all(bind=engine)
@@ -102,11 +106,8 @@ async def offline(request: Request):
 from app.routers import offline
 app.include_router(offline.router)
 
-from fastapi.responses import FileResponse
+from app.routers import zones
 
-@app.get("/service-worker.js")
-async def service_worker():
-    return FileResponse("static/service-worker.js", media_type="application/javascript")
 
 
 # ▶️ Lancement local (optionnel)

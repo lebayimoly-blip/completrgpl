@@ -130,5 +130,11 @@
 <a href="/zones-attribuees">
   <button style="margin-top: 20px;">📄 Voir les zones attribuées</button>
 </a>
-
+<!-- Bouton pour charger zones depuis CSV/Excel -->
+<div style="margin-top: 20px;">
+  <label for="zoneFile">📂 Importer zones (CSV/Excel) :</label>
+  <input type="file" id="zoneFile" accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel" />
+  <button onclick="importZones()">⬆️ Charger les zones</button>
+</div>
+<script src="/static/js/zones.js"></script>
 {% endblock %}

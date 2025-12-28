@@ -114,3 +114,21 @@ async def synchronisation(request: Request):
 async def get_pending_records(db: Session = Depends(database.get_db)):
     familles = db.query(models.Famille).filter(models.Famille.is_synced == False).all()
     return familles
+
+@router.get("/famille-public", response_class=HTMLResponse)
+def famille_public(request: Request):
+    return templates.TemplateResponse("famille_public.html", {"request": request})
+
+@router.post("/api/force-sync")
+async def force_sync(db: Session = Depends(database.get_db)):
+    """
+    Marque toutes les familles en attente comme synchronisées.
+    """
+    pending_familles = db.query(models.Famille).filter(models.Famille.is_synced == False).all()
+
+    for famille in pending_familles:
+        famille.is_synced = True
+
+    db.commit()
+
+    return {"message": f"{len(pending_familles)} familles synchronisées avec succès ✅"}

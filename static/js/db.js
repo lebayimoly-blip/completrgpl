@@ -49,6 +49,7 @@ function saveRecord(formElement) {
         pendingFiles--;
         if (pendingFiles === 0) {
           storeRecord(record);
+          sendToServer(record); // 🚀 envoi vers Render
         }
       };
       reader.readAsDataURL(value);
@@ -59,14 +60,32 @@ function saveRecord(formElement) {
 
   if (!hasFile) {
     storeRecord(record);
+    sendToServer(record); // 🚀 envoi vers Render
   }
 }
 
 function storeRecord(data) {
   openDatabase().then(db => {
-    const tx = db.transaction(['pending'], 'readwrite');
-    const store = tx.objectStore('pending');
+    const tx = db.transaction([STORE_NAME], 'readwrite');
+    const store = tx.objectStore(STORE_NAME);
     store.add(data);
     console.log("✅ Donnée enregistrée localement :", data);
   });
+}
+
+// 🚀 Nouvelle fonction : envoi vers ton API FastAPI (Render)
+async function sendToServer(data) {
+  try {
+    const response = await fetch("/api/force-sync", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data)
+    });
+
+    if (!response.ok) throw new Error("Erreur serveur");
+    const result = await response.json();
+    console.log("✅ Donnée envoyée au serveur :", result);
+  } catch (err) {
+    console.warn("❌ Impossible d'envoyer au serveur, donnée gardée en local :", err);
+  }
 }
